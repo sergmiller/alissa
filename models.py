@@ -22,6 +22,7 @@ def model1(input_shape, eps = 1e-5):
         kernel_regularizer=l2(eps), bias_regularizer=l2(eps))(conv_inputs)
     conv_net = BatchNormalization()(conv_net)
     conv_net = LeakyReLU(alpha=0.05)(conv_net)
+    conv_net = Dropout(0.05)(conv_net)
     conv_net = MaxPool1D(pool_size=1)(conv_net)
 #     conv_net = Conv1D(filters=64, kernel_size=10, padding='same')
 #     conv_net = BatchNormalization()(conv_net)
@@ -45,6 +46,7 @@ def model1(input_shape, eps = 1e-5):
     mutual_net = Dropout(0.05)(mutual_net)
     mutual_net = Dense(256, kernel_regularizer=l2(eps),
                     bias_regularizer=l2(eps))(mutual_net)
+    mutual_net = LeakyReLU(alpha=0.05)(mutual_net)
 
     output = Dense(units=1,  kernel_regularizer=l2(eps),
                     bias_regularizer=l2(eps), activation=sigmoid)(mutual_net)
