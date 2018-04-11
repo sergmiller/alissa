@@ -70,7 +70,7 @@ def ndcg(y_true, y_pred, groups):
                                       y_pred.reshape(-1, 1), 
                                       groups.reshape(-1, 1)], axis=1))
     res = df.groupby(by=groups)[[0, 1]].apply(lambda x: ndcg_in_group(x))
-    return np.mean(res.values)
+    return np.mean(res.values), np.std(res.values)
                    
 from ranking import ndcg_score
 def ndcg_in_group(df):
@@ -98,10 +98,11 @@ class NDCGCallback(keras.callbacks.Callback):
 
     def on_epoch_end(self, epoch, logs={}):
         y_pred = self.model.predict(self.x)[0]
-        score = ndcg(self.y, y_pred, self.groups)
+        score, std = ndcg(self.y, y_pred, self.groups)
         y_pred_val = self.model.predict(self.x_val, batch_size=128)[0]
-        score_val = ndcg(self.y_val, y_pred_val, self.groups_val)
-        s = "ndcg: {:.5f} - ndcg_val: {:.5f}".format(round(score,5), round(score_val,5))
+        score_val, std_val = ndcg(self.y_val, y_pred_val, self.groups_val)
+        s = "ndcg: {:.5f} - ndcg_std: {:.5f} - ndcg_val: {:.5f} - - ndcg_val_std:  \
+            {:.5f}".format(round(score,5),round(std, 5), round(score_val,5), round(std_val, 5))
         os.system("telegram-send '{}'".format(s))
         return
 
