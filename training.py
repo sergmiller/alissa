@@ -12,10 +12,10 @@ def flow(df, emb, batch_size, y=None, weights=None, shuffle=True, max_len=40):
         for i in np.arange(0, len(ranges) - batch_size + 1, batch_size):
             inds = ranges[i:i + batch_size]
             df_batch = df.iloc[inds]
-            x_batch = df2vec(df_batch, emb)
-            batch = [build4head(x_batch, max_len),]
+            x_batch = build4head(df2vec(df_batch, emb), max_len)
+            batch = [x_batch,]
             if y is not None:
-                batch.append(y[inds])
+                batch.append([y[inds], x_batch[2], x_batch[3]])
             if weights is not None:
-                batch.append(weights[inds])
+                batch.append([weights[inds], np.ones(inds.shape), np.ones(inds.shape)])
             yield tuple(batch)
