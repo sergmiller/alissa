@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 
 from building import df2vec, build4head
+from callbacks import fix_val, ndcg
 
 
 def flow(df, emb, batch_size, y=None, weights=None, shuffle=True, max_len=40):
@@ -20,28 +21,17 @@ def flow(df, emb, batch_size, y=None, weights=None, shuffle=True, max_len=40):
                 batch.append([weights[inds], np.ones(inds.shape), np.ones(inds.shape)])
             yield tuple(batch)
 
-            
-def predict(model_name, df, emb, max_len=40, use_y=False):
-    model = load_model(model_name)
 
-    model.compile(
-        loss={'class_out': binary_crossentropy, 
-              'auto3' : mean_squared_error, 
-              'auto4': mean_squared_error},
-        loss_weights = {'class_out': 1, 
-              'auto3' : 0, 
-              'auto4': 0},
-        optimizer='rmsprop',
-    )
-    
+
+
+def predict(model, df, emb, max_len=40, use_y=False):
     X =  build4head(df2vec(df, emb), max_len)
     groups = df['0'].values
-    
+
     y_pred = model.predict(X)[0]
     if use_y:
-        y_true = np.array([fix_val(s) for s in train['6'].values])
+        y_true = np.array([fix_val(s) for s in df['6'].values])
         score, std = ndcg(y_true, y_pred, groups)
         print('ndcg_mean: {}, ndcg_std: {}'.format(score, std))
-        
+
     return y_pred
-    
