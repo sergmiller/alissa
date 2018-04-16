@@ -1,5 +1,7 @@
 import os
 import keras
+import generator
+import ranking
 
 
 class TelegramCallback(keras.callbacks.Callback):
@@ -28,8 +30,8 @@ from building import build4head
 from building import df2vec
 class RocCallback(keras.callbacks.Callback):
     def __init__(self, train, val, emb, max_len=40):
-        self.x =  build4head(df2vec(train, emb), max_len)
-        self.x_val = build4head(df2vec(val, emb), max_len)
+        self.x =  generator.gen_x(train, emb, max_len)
+        self.x_val = generator.gen_x(val, emb, max_len)
         self.y = (train['6'] == 'good').values
         self.y_val = (val['6'] == 'good').values
         self.max_len = max_len
@@ -57,34 +59,17 @@ class RocCallback(keras.callbacks.Callback):
 
     def on_batch_end(self, batch, logs={}):
         return
-    
-def fix_val(s):
-    d = {'good':2, 'neutral':1, 'bad':0}
-    return d[s]
 
 
-import pandas as pd
-import numpy as np
-def ndcg(y_true, y_pred, groups):
-    df = pd.DataFrame(np.concatenate([y_true.reshape(-1, 1) + 1, 
-                                      y_pred.reshape(-1, 1), 
-                                      groups.reshape(-1, 1)], axis=1))
-    res = df.groupby(by=groups)[[0, 1]].apply(lambda x: ndcg_in_group(x))
-    return np.mean(res.values), np.std(res.values)
-                   
-from ranking import ndcg_score
-def ndcg_in_group(df):
-    return ndcg_score(df[0].values, df[1].values, gains='linear')
-                      
-    
+
 class NDCGCallback(keras.callbacks.Callback):
     def __init__(self, train, val, emb, max_len=40):
-        self.x =  build4head(df2vec(train, emb), max_len)
-        self.x_val = build4head(df2vec(val, emb), max_len)
+        self.x =  generator.gen_x(train, emb, max_len)
+        self.x_val =  generator.gen_x(val, emb, max_len)
         self.groups = train['0'].values
         self.groups_val = val['0'].values
-        self.y = np.array([fix_val(s) for s in train['6'].values])
-        self.y_val = np.array([fix_val(s) for s in val['6'].values])
+        self.y = generator.gen_y(train)
+        self.y_val = generator.gen_y(val)
         self.max_len = max_len
 
     def on_train_begin(self, logs={}):
@@ -100,7 +85,7 @@ class NDCGCallback(keras.callbacks.Callback):
         y_pred = self.model.predict(self.x)[0]
         score, std = ndcg(self.y, y_pred, self.groups)
         y_pred_val = self.model.predict(self.x_val, batch_size=128)[0]
-        score_val, std_val = ndcg(self.y_val, y_pred_val, self.groups_val)
+        score_val, std_val = ranking.ndcg(self.y_val, y_pred_val, self.groups_val)
         s = "ndcg: {:.5f} - ndcg_std: {:.5f} - ndcg_val: {:.5f} - - ndcg_val_std:  \
             {:.5f}".format(round(score,5),round(std, 5), round(score_val,5), round(std_val, 5))
         os.system("telegram-send '{}'".format(s))

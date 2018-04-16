@@ -124,9 +124,10 @@ def ndcg_score(y_true, y_score, k=10, gains="exponential"):
     -------
     NDCG @k : float
     """
+
     best = dcg_score(y_true, y_true, k, gains)
     actual = dcg_score(y_true, y_score, k, gains)
-    return actual / best
+    return actual / best if best > 0 else 1
 
 
 # Alternative API.
@@ -178,6 +179,22 @@ def ndcg_from_ranking(y_true, ranking):
     best = dcg_from_ranking(y_true, best_ranking[:k])
     return dcg_from_ranking(y_true, ranking) / best
 
+
+######################## MY WRAPPERS ############################
+
+import pandas as pd
+import numpy as np
+def ndcg(y_true, y_pred, groups):
+    df = pd.DataFrame(np.concatenate([y_true.reshape(-1, 1),
+                                      y_pred.reshape(-1, 1),
+                                      groups.reshape(-1, 1)], axis=1))
+    res = df.groupby(by=groups)[[0, 1]].apply(lambda x: ndcg_in_group(x))
+    return np.mean(res.values), np.std(res.values)
+
+def ndcg_in_group(df):
+    return ndcg_score(df[0].values, df[1].values, gains='linear')
+
+######################## MY WRAPPERS ############################
 
 if __name__ == '__main__':
 
