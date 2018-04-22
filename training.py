@@ -37,7 +37,7 @@ def predict_with_nn(model, df, emb, max_len=40, use_y=False):
     return y_pred
 
 
-def predict_with_stack_model(rank_model, net_model, df, emb, max_len=40, use_y=False):
+def predict_with_stack_model(rank_model, net_model, df, emb, max_len=40, use_y=False, use_proba=False):
     if use_y:
         X, y = generator.make_dataset(df, net_model, emb)
     else:
@@ -45,7 +45,11 @@ def predict_with_stack_model(rank_model, net_model, df, emb, max_len=40, use_y=F
 
     groups = df['0'].values
 
-    y_pred = rank_model.predict(X)
+    if use_proba:
+        y_pred = rank_model.predict_proba(X)[:, 1]
+    else:
+        y_pred = rank_model.predict(X)
+
     if use_y:
         score, std = ndcg(y, y_pred, groups)
         print('ndcg_mean: {}, ndcg_std: {}'.format(score, std))
